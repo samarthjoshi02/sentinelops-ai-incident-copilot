@@ -1,0 +1,815 @@
+{
+  "version": "1.0",
+  "diagramId": "exported",
+  "title": "Architecture Diagram",
+  "nodes": [
+    {
+      "id": "telemetry-ingestion-agent",
+      "type": "service",
+      "label": "Telemetry Ingestion Agent",
+      "generic_name": "telemetry ingestion service",
+      "ports": [
+        {
+          "id": "in-telemetry",
+          "label": "Telemetry In",
+          "side": "left"
+        },
+        {
+          "id": "out-kafka",
+          "label": "Kafka Out",
+          "side": "right"
+        }
+      ],
+      "data": {
+        "description": "Collects, normalizes, and enriches logs, metrics, and traces from diverse observability sources.",
+        "tech": [
+          "Python",
+          "OpenTelemetry",
+          "Kafka-Python",
+          "Fluentd"
+        ],
+        "cloud": "aws",
+        "isolated": false
+      }
+    },
+    {
+      "id": "kafka-event-backbone",
+      "type": "message-queue",
+      "label": "Kafka Event Backbone",
+      "generic_name": "message broker",
+      "ports": [
+        {
+          "id": "in-events",
+          "label": "Events In",
+          "side": "left"
+        },
+        {
+          "id": "out-events",
+          "label": "Events Out",
+          "side": "right"
+        }
+      ],
+      "data": {
+        "description": "High-throughput event backbone for asynchronous telemetry processing and incident event distribution.",
+        "tech": [
+          "Apache Kafka",
+          "Confluent"
+        ],
+        "cloud": "aws",
+        "isolated": false
+      }
+    },
+    {
+      "id": "mastra-orchestrator",
+      "type": "service",
+      "label": "Mastra Incident Orchestrator",
+      "generic_name": "ai orchestrator",
+      "ports": [
+        {
+          "id": "in-events",
+          "label": "Events In",
+          "side": "left"
+        },
+        {
+          "id": "out-agents",
+          "label": "Agent Dispatch",
+          "side": "right"
+        },
+        {
+          "id": "in-agents-results",
+          "label": "Agent Results",
+          "side": "right"
+        },
+        {
+          "id": "out-safety-check",
+          "label": "Safety Check",
+          "side": "bottom"
+        },
+        {
+          "id": "out-db",
+          "label": "DB Access",
+          "side": "bottom"
+        },
+        {
+          "id": "in-api",
+          "label": "API In",
+          "side": "top"
+        }
+      ],
+      "data": {
+        "description": "Central intelligence engine managing stateful multi-agent workflows and incident context.",
+        "tech": [
+          "Python",
+          "Mastra",
+          "LangGraph",
+          "Redis"
+        ],
+        "cloud": "aws",
+        "isolated": false
+      }
+    },
+    {
+      "id": "anomaly-detection-agent",
+      "type": "service",
+      "label": "Anomaly Detection Agent",
+      "generic_name": "anomaly detection agent",
+      "ports": [
+        {
+          "id": "in-task",
+          "label": "Task In",
+          "side": "left"
+        },
+        {
+          "id": "out-safety",
+          "label": "Safety Check",
+          "side": "right"
+        },
+        {
+          "id": "out-result",
+          "label": "Result Out",
+          "side": "left"
+        }
+      ],
+      "data": {
+        "description": "Identifies abnormal patterns in telemetry and classifies incident severity.",
+        "tech": [
+          "Python",
+          "LangGraph",
+          "Scikit-learn",
+          "TensorFlow"
+        ],
+        "cloud": "aws",
+        "isolated": false
+      }
+    },
+    {
+      "id": "historical-retrieval-agent",
+      "type": "service",
+      "label": "Historical Retrieval Agent",
+      "generic_name": "retrieval agent",
+      "ports": [
+        {
+          "id": "in-task",
+          "label": "Task In",
+          "side": "left"
+        },
+        {
+          "id": "out-qdrant",
+          "label": "Qdrant Query",
+          "side": "right"
+        },
+        {
+          "id": "out-result",
+          "label": "Result Out",
+          "side": "left"
+        }
+      ],
+      "data": {
+        "description": "Queries Qdrant for similar historical incidents and resolution patterns.",
+        "tech": [
+          "Python",
+          "LangGraph",
+          "Qdrant-Client",
+          "LangChain"
+        ],
+        "cloud": "aws",
+        "isolated": false
+      }
+    },
+    {
+      "id": "rca-agent",
+      "type": "service",
+      "label": "Root Cause Analysis Agent",
+      "generic_name": "rca agent",
+      "ports": [
+        {
+          "id": "in-task",
+          "label": "Task In",
+          "side": "left"
+        },
+        {
+          "id": "out-safety",
+          "label": "Safety Check",
+          "side": "right"
+        },
+        {
+          "id": "out-result",
+          "label": "Result Out",
+          "side": "left"
+        }
+      ],
+      "data": {
+        "description": "Correlates telemetry and historical data to identify probable causes.",
+        "tech": [
+          "Python",
+          "LangGraph",
+          "OpenAI-GPT4o"
+        ],
+        "cloud": "aws",
+        "isolated": false
+      }
+    },
+    {
+      "id": "remediation-agent",
+      "type": "service",
+      "label": "Remediation Agent",
+      "generic_name": "remediation agent",
+      "ports": [
+        {
+          "id": "in-task",
+          "label": "Task In",
+          "side": "left"
+        },
+        {
+          "id": "out-safety",
+          "label": "Safety Check",
+          "side": "right"
+        },
+        {
+          "id": "out-result",
+          "label": "Result Out",
+          "side": "left"
+        }
+      ],
+      "data": {
+        "description": "Proposes remediation actions and recovery runbooks based on RCA.",
+        "tech": [
+          "Python",
+          "LangGraph",
+          "Ansible",
+          "Terraform"
+        ],
+        "cloud": "aws",
+        "isolated": false
+      }
+    },
+    {
+      "id": "post-mortem-agent",
+      "type": "service",
+      "label": "Post-Mortem Agent",
+      "generic_name": "post-mortem agent",
+      "ports": [
+        {
+          "id": "in-task",
+          "label": "Task In",
+          "side": "left"
+        },
+        {
+          "id": "out-safety",
+          "label": "Safety Check",
+          "side": "right"
+        },
+        {
+          "id": "out-result",
+          "label": "Result Out",
+          "side": "left"
+        }
+      ],
+      "data": {
+        "description": "Automatically generates comprehensive incident documentation and post-mortems.",
+        "tech": [
+          "Python",
+          "LangGraph",
+          "LlamaIndex"
+        ],
+        "cloud": "aws",
+        "isolated": false
+      }
+    },
+    {
+      "id": "knowledge-update-agent",
+      "type": "service",
+      "label": "Knowledge Update Agent",
+      "generic_name": "knowledge update agent",
+      "ports": [
+        {
+          "id": "in-task",
+          "label": "Task In",
+          "side": "left"
+        },
+        {
+          "id": "out-qdrant-write",
+          "label": "Qdrant Write",
+          "side": "right"
+        },
+        {
+          "id": "out-result",
+          "label": "Result Out",
+          "side": "left"
+        }
+      ],
+      "data": {
+        "description": "Writes approved incident knowledge back into Qdrant for continuous learning.",
+        "tech": [
+          "Python",
+          "LangGraph",
+          "Qdrant-Client"
+        ],
+        "cloud": "aws",
+        "isolated": false
+      }
+    },
+    {
+      "id": "qdrant-memory-base",
+      "type": "database",
+      "label": "Qdrant Institutional Memory",
+      "generic_name": "vector database",
+      "ports": [
+        {
+          "id": "in-query-write",
+          "label": "Query/Write In",
+          "side": "left"
+        }
+      ],
+      "data": {
+        "description": "Institutional memory storing vector embeddings of historical incidents, runbooks, and telemetry patterns.",
+        "tech": [
+          "Qdrant",
+          "Vector-Search",
+          "HNSW-Indexing"
+        ],
+        "cloud": "aws",
+        "isolated": false
+      }
+    },
+    {
+      "id": "enkrypt-ai-safety",
+      "type": "service",
+      "label": "Enkrypt AI Safety Layer",
+      "generic_name": "safety evaluation service",
+      "ports": [
+        {
+          "id": "in-validation-req",
+          "label": "Validation In",
+          "side": "left"
+        },
+        {
+          "id": "out-validation-res",
+          "label": "Validation Out",
+          "side": "right"
+        }
+      ],
+      "data": {
+        "description": "Safety and evaluation layer that detects hallucinations and enforces operational policies.",
+        "tech": [
+          "Enkrypt AI",
+          "Python",
+          "PyTorch"
+        ],
+        "cloud": "aws",
+        "isolated": false
+      }
+    },
+    {
+      "id": "incident-metadata-db",
+      "type": "database",
+      "label": "Incident Metadata DB Space",
+      "generic_name": "relational database",
+      "ports": [
+        {
+          "id": "in-db-ops",
+          "label": "DB Ops In",
+          "side": "left"
+        }
+      ],
+      "data": {
+        "description": "Stores incident metadata, severity levels, ownership, and audit logs.",
+        "tech": [
+          "PostgreSQL",
+          "SQLAlchemy",
+          "RDS"
+        ],
+        "cloud": "aws",
+        "isolated": false
+      }
+    },
+    {
+      "id": "sre-api-gateway",
+      "type": "api-gateway",
+      "label": "SRE API Gateway",
+      "generic_name": "api gateway",
+      "ports": [
+        {
+          "id": "in-http",
+          "label": "HTTP In",
+          "side": "left"
+        },
+        {
+          "id": "out-orchestrator",
+          "label": "Orchestrator Out",
+          "side": "right"
+        }
+      ],
+      "data": {
+        "description": "Unified entry point for SRE Dashboard and external integrations.",
+        "tech": [
+          "Kong Gateway",
+          "Nginx"
+        ],
+        "cloud": "aws",
+        "isolated": false
+      }
+    },
+    {
+      "id": "sre-dashboard-ui",
+      "type": "frontend",
+      "label": "SRE Dashboard UI",
+      "generic_name": "frontend dashboard",
+      "ports": [
+        {
+          "id": "out-api-req",
+          "label": "API Request",
+          "side": "right"
+        }
+      ],
+      "data": {
+        "description": "Real-time monitoring, incident timelines, and human-in-the-loop approval interface.",
+        "tech": [
+          "React",
+          "TypeScript",
+          "Tailwind CSS",
+          "Vite"
+        ],
+        "cloud": "aws",
+        "isolated": false
+      }
+    },
+    {
+      "id": "notification-service-node",
+      "type": "service",
+      "label": "Notification Service",
+      "generic_name": "notification service",
+      "ports": [
+        {
+          "id": "in-notify-req",
+          "label": "Notify In",
+          "side": "left"
+        },
+        {
+          "id": "out-external-notify",
+          "label": "External Notify",
+          "side": "right"
+        }
+      ],
+      "data": {
+        "description": "Dispatches alerts to Slack, Microsoft Teams, and PagerDuty.",
+        "tech": [
+          "Node.js",
+          "Twilio API",
+          "PagerDuty API",
+          "Slack SDK"
+        ],
+        "cloud": "aws",
+        "isolated": true
+      }
+    },
+    {
+      "id": "telemetry-sources-external",
+      "type": "client",
+      "label": "Telemetry Sources (Logs/Metrics/Traces)",
+      "generic_name": "telemetry sources",
+      "ports": [
+        {
+          "id": "out-telemetry-data",
+          "label": "Telemetry Data Out",
+          "side": "right"
+        }
+      ],
+      "data": {
+        "description": "External observability platforms providing logs, metrics, and traces.",
+        "tech": [
+          "Prometheus",
+          "Grafana",
+          "Datadog",
+          "AWS CloudWatch",
+          "Jaeger"
+        ],
+        "cloud": "external",
+        "isolated": false
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "sources-to-ingestion",
+      "source": {
+        "nodeId": "telemetry-sources-external",
+        "portId": "out-telemetry-data"
+      },
+      "target": {
+        "nodeId": "telemetry-ingestion-agent",
+        "portId": "in-telemetry"
+      },
+      "type": "http",
+      "label": "Ingest Telemetry"
+    },
+    {
+      "id": "ingestion-to-kafka",
+      "source": {
+        "nodeId": "telemetry-ingestion-agent",
+        "portId": "out-kafka"
+      },
+      "target": {
+        "nodeId": "kafka-event-backbone",
+        "portId": "in-events"
+      },
+      "type": "event-stream",
+      "label": "Stream Events"
+    },
+    {
+      "id": "kafka-to-mastra",
+      "source": {
+        "nodeId": "kafka-event-backbone",
+        "portId": "out-events"
+      },
+      "target": {
+        "nodeId": "mastra-orchestrator",
+        "portId": "in-events"
+      },
+      "type": "event-stream",
+      "label": "Consume Events"
+    },
+    {
+      "id": "mastra-to-anomaly-agent",
+      "source": {
+        "nodeId": "mastra-orchestrator",
+        "portId": "out-agents"
+      },
+      "target": {
+        "nodeId": "anomaly-detection-agent",
+        "portId": "in-task"
+      },
+      "type": "internal-api",
+      "label": "Detect Anomaly"
+    },
+    {
+      "id": "mastra-to-retrieval-agent",
+      "source": {
+        "nodeId": "mastra-orchestrator",
+        "portId": "out-agents"
+      },
+      "target": {
+        "nodeId": "historical-retrieval-agent",
+        "portId": "in-task"
+      },
+      "type": "internal-api",
+      "label": "Retrieve History"
+    },
+    {
+      "id": "mastra-to-rca-agent",
+      "source": {
+        "nodeId": "mastra-orchestrator",
+        "portId": "out-agents"
+      },
+      "target": {
+        "nodeId": "rca-agent",
+        "portId": "in-task"
+      },
+      "type": "internal-api",
+      "label": "Analyze Root Cause"
+    },
+    {
+      "id": "mastra-to-remediation-agent",
+      "source": {
+        "nodeId": "mastra-orchestrator",
+        "portId": "out-agents"
+      },
+      "target": {
+        "nodeId": "remediation-agent",
+        "portId": "in-task"
+      },
+      "type": "internal-api",
+      "label": "Plan Remediation"
+    },
+    {
+      "id": "mastra-to-postmortem-agent",
+      "source": {
+        "nodeId": "mastra-orchestrator",
+        "portId": "out-agents"
+      },
+      "target": {
+        "nodeId": "post-mortem-agent",
+        "portId": "in-task"
+      },
+      "type": "internal-api",
+      "label": "Generate Report"
+    },
+    {
+      "id": "mastra-to-knowledge-agent",
+      "source": {
+        "nodeId": "mastra-orchestrator",
+        "portId": "out-agents"
+      },
+      "target": {
+        "nodeId": "knowledge-update-agent",
+        "portId": "in-task"
+      },
+      "type": "internal-api",
+      "label": "Update Memory"
+    },
+    {
+      "id": "retrieval-agent-to-qdrant",
+      "source": {
+        "nodeId": "historical-retrieval-agent",
+        "portId": "out-qdrant"
+      },
+      "target": {
+        "nodeId": "qdrant-memory-base",
+        "portId": "in-query-write"
+      },
+      "type": "database",
+      "label": "Semantic Search"
+    },
+    {
+      "id": "knowledge-agent-to-qdrant",
+      "source": {
+        "nodeId": "knowledge-update-agent",
+        "portId": "out-qdrant-write"
+      },
+      "target": {
+        "nodeId": "qdrant-memory-base",
+        "portId": "in-query-write"
+      },
+      "type": "database",
+      "label": "Store Knowledge"
+    },
+    {
+      "id": "anomaly-agent-to-safety",
+      "source": {
+        "nodeId": "anomaly-detection-agent",
+        "portId": "out-safety"
+      },
+      "target": {
+        "nodeId": "enkrypt-ai-safety",
+        "portId": "in-validation-req"
+      },
+      "type": "internal-api",
+      "label": "Validate Detection"
+    },
+    {
+      "id": "rca-agent-to-safety",
+      "source": {
+        "nodeId": "rca-agent",
+        "portId": "out-safety"
+      },
+      "target": {
+        "nodeId": "enkrypt-ai-safety",
+        "portId": "in-validation-req"
+      },
+      "type": "internal-api",
+      "label": "Validate RCA"
+    },
+    {
+      "id": "remediation-agent-to-safety",
+      "source": {
+        "nodeId": "remediation-agent",
+        "portId": "out-safety"
+      },
+      "target": {
+        "nodeId": "enkrypt-ai-safety",
+        "portId": "in-validation-req"
+      },
+      "type": "internal-api",
+      "label": "Validate Plan"
+    },
+    {
+      "id": "postmortem-agent-to-safety",
+      "source": {
+        "nodeId": "post-mortem-agent",
+        "portId": "out-safety"
+      },
+      "target": {
+        "nodeId": "enkrypt-ai-safety",
+        "portId": "in-validation-req"
+      },
+      "type": "internal-api",
+      "label": "Validate Report"
+    },
+    {
+      "id": "safety-to-mastra-res",
+      "source": {
+        "nodeId": "enkrypt-ai-safety",
+        "portId": "out-validation-res"
+      },
+      "target": {
+        "nodeId": "mastra-orchestrator",
+        "portId": "in-agents-results"
+      },
+      "type": "internal-api",
+      "label": "Safety Result"
+    },
+    {
+      "id": "mastra-to-metadata-db",
+      "source": {
+        "nodeId": "mastra-orchestrator",
+        "portId": "out-db"
+      },
+      "target": {
+        "nodeId": "incident-metadata-db",
+        "portId": "in-db-ops"
+      },
+      "type": "database",
+      "label": "Persist Incident"
+    },
+    {
+      "id": "mastra-to-notifications-edge-id",
+      "source": {
+        "nodeId": "mastra-orchestrator",
+        "portId": "out-agents"
+      },
+      "target": {
+        "nodeId": "notification-service-node",
+        "portId": "in-notify-req"
+      },
+      "type": "internal-api",
+      "label": "Alert SREs"
+    },
+    {
+      "id": "dashboard-to-gateway-edge-id",
+      "source": {
+        "nodeId": "sre-dashboard-ui",
+        "portId": "out-api-req"
+      },
+      "target": {
+        "nodeId": "sre-api-gateway",
+        "portId": "in-http"
+      },
+      "type": "http",
+      "label": "User Actions"
+    },
+    {
+      "id": "gateway-to-mastra-edge-id",
+      "source": {
+        "nodeId": "sre-api-gateway",
+        "portId": "out-orchestrator"
+      },
+      "target": {
+        "nodeId": "mastra-orchestrator",
+        "portId": "in-api"
+      },
+      "type": "internal-api",
+      "label": "Command Ingress"
+    }
+  ],
+  "groups": [
+    {
+      "children": [
+        "telemetry-sources-external",
+        "telemetry-ingestion-agent"
+      ],
+      "id": "ingestion-layer-group",
+      "label": "Ingestion & Telemetry Layer"
+    },
+    {
+      "children": [
+        "kafka-event-backbone"
+      ],
+      "id": "event-backbone-group-id",
+      "label": "Event Backbone (Kafka)"
+    },
+    {
+      "children": [
+        "mastra-orchestrator",
+        "incident-metadata-db"
+      ],
+      "id": "orchestration-layer-group-id",
+      "label": "Orchestration & Control Layer (Mastra)"
+    },
+    {
+      "children": [
+        "anomaly-detection-agent",
+        "historical-retrieval-agent",
+        "rca-agent",
+        "remediation-agent",
+        "post-mortem-agent",
+        "knowledge-update-agent"
+      ],
+      "id": "intelligence-layer-group-id",
+      "label": "Autonomous Incident Intelligence Layer (Agents)"
+    },
+    {
+      "children": [
+        "qdrant-memory-base"
+      ],
+      "id": "memory-layer-group-id",
+      "label": "Institutional Memory (Qdrant)"
+    },
+    {
+      "children": [
+        "enkrypt-ai-safety"
+      ],
+      "id": "safety-layer-group-id",
+      "label": "Safety & Evaluation Layer (Enkrypt AI)"
+    },
+    {
+      "children": [
+        "sre-api-gateway",
+        "sre-dashboard-ui",
+        "notification-service-node"
+      ],
+      "id": "ui-approval-layer-group-id",
+      "label": "User Interface & Human Approval Layer"
+    }
+  ],
+  "metadata": {}
+}
