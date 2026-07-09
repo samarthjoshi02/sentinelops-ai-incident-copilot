@@ -1,8 +1,11 @@
 {
   "name": "sentinelops-ai",
   "version": "1.0.0",
-  "description": "",
   "main": "index.js",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "mastra dev",
@@ -17,6 +20,7 @@
     "node": ">=22.13.0"
   },
   "dependencies": {
+    "@auth/prisma-adapter": "^2.11.2",
     "@mastra/core": "^1.50.0",
     "@mastra/duckdb": "^1.5.0",
     "@mastra/evals": "^1.5.1",
@@ -24,11 +28,23 @@
     "@mastra/loggers": "^1.2.0",
     "@mastra/memory": "^1.22.1",
     "@mastra/observability": "^1.16.0",
+    "@mastra/pg": "^1.15.1",
+    "@neondatabase/serverless": "^1.1.0",
+    "@prisma/adapter-neon": "^7.8.0",
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "bcryptjs": "^3.0.3",
+    "pg": "^8.22.0",
+    "ws": "^8.21.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^26.1.0",
+    "@types/pg": "^8.20.0",
+    "@types/ws": "^8.18.1",
     "mastra": "^1.18.1",
+    "prisma": "^7.8.0",
     "typescript": "^6.0.3"
   }
 }

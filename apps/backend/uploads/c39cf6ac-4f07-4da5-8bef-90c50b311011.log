@@ -1,0 +1,1 @@
+FATAL: core dumped at 0x7fffbcda01. Exception: NullPointerException in thread 'main'.

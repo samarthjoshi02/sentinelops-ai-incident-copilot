@@ -1,0 +1,279 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+  SRE_ENGINEER
+  DEVOPS_ENGINEER
+  INCIDENT_MANAGER
+  READ_ONLY
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?   // Hashed password for Credentials authentication
+  role          Role      @default(READ_ONLY)
+  accounts      Account[]
+  sessions      Session[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Core Incident Platform relations
+  incidents     Incident[]
+  logFiles      LogFile[]
+  postMortems   PostMortem[]
+  notifications Notification[]
+  auditLogs     AuditLog[]
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?  @db.Text
+  access_token       String?  @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?  @db.Text
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  id         String   @id @default(cuid())
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ====================================================
+// CORE INCIDENT PLATFORM MODELS
+// ====================================================
+
+enum IncidentStatus {
+  TRIGGERED
+  ACKNOWLEDGED
+  INVESTIGATING
+  MITIGATING
+  RESOLVED
+  CLOSED
+}
+
+enum IncidentSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum TimelineEventType {
+  SYSTEM
+  HUMAN
+  AI_AGENT
+  METRIC_TRIGGER
+}
+
+enum PlanStatus {
+  DRAFT
+  APPROVED
+  REJECTED
+  EXECUTING
+  COMPLETED
+  FAILED
+}
+
+enum PostMortemStatus {
+  DRAFT
+  REVIEWED
+  PUBLISHED
+}
+
+enum ExecutionStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+  SUSPENDED
+}
+
+enum NotificationType {
+  ALERT
+  INFO
+  APPROVAL_REQUIRED
+}
+
+model Incident {
+  id          String           @id @default(cuid())
+  title       String
+  description String?
+  status      IncidentStatus   @default(TRIGGERED)
+  severity    IncidentSeverity @default(MEDIUM)
+  source      String           @default("LOG_UPLOAD")
+  reporterId  String?
+  reporter    User?            @relation(fields: [reporterId], references: [id], onDelete: SetNull)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  timeline           IncidentTimeline[]
+  logFiles           LogFile[]
+  telemetryEvents    TelemetryEvent[]
+  rootCause          RootCause?
+  remediationPlan    RemediationPlan?
+  postMortem         PostMortem?
+  agentExecutions    AgentExecution[]
+  workflowExecutions WorkflowExecution[]
+}
+
+model IncidentTimeline {
+  id               String            @id @default(cuid())
+  incidentId       String
+  incident         Incident          @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  timestamp        DateTime          @default(now())
+  eventDescription String
+  type             TimelineEventType @default(SYSTEM)
+  metadata         Json?
+  createdAt        DateTime          @default(now())
+}
+
+model LogFile {
+  id         String    @id @default(cuid())
+  incidentId String?
+  incident   Incident? @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+  fileName   String
+  fileType   String
+  fileSize   Int
+  filePath   String
+  checksum   String?
+  uploaderId String?
+  uploader   User?     @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
+  createdAt  DateTime  @default(now())
+}
+
+model TelemetryEvent {
+  id          String    @id @default(cuid())
+  incidentId  String?
+  incident    Incident? @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+  metricName  String
+  metricValue Float
+  timestamp   DateTime  @default(now())
+  dimensions  Json?
+  createdAt   DateTime  @default(now())
+}
+
+model RootCause {
+  id           String   @id @default(cuid())
+  incidentId   String   @unique
+  incident     Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  summary      String
+  confidence   Float
+  evidence     String?
+  findings     Json?
+  createdById  String?
+  createdAt    DateTime @default(now())
+}
+
+model RemediationPlan {
+  id          String     @id @default(cuid())
+  incidentId  String     @unique
+  incident    Incident   @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  description String
+  steps       Json
+  status      PlanStatus @default(DRAFT)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Runbook {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  steps       Json
+  tags        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PostMortem {
+  id                  String           @id @default(cuid())
+  incidentId          String           @unique
+  incident            Incident         @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  summary             String
+  rootCauseAnalysis   String
+  preventativeActions String
+  authorId            String?
+  author              User?            @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  status              PostMortemStatus @default(DRAFT)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+}
+
+model AgentExecution {
+  id          String          @id @default(cuid())
+  incidentId  String
+  incident    Incident        @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  agentName   String
+  status      ExecutionStatus @default(RUNNING)
+  input       Json?
+  output      Json?
+  error       String?
+  createdAt   DateTime        @default(now())
+  completedAt DateTime?
+}
+
+model WorkflowExecution {
+  id           String          @id @default(cuid())
+  incidentId   String
+  incident     Incident        @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  workflowName String
+  status       ExecutionStatus @default(RUNNING)
+  state        Json?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  recipientId String
+  recipient   User             @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  title       String
+  message     String
+  type        NotificationType @default(INFO)
+  read        Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String
+  entityId   String?
+  details    Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+}
