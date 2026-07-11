@@ -35,6 +35,14 @@ export const AGENT_REGISTRY: Record<string, AgentMetadata> = {
     promptTemplate: "remediation-specialist",
     allowedTools: ["remediation-executor"]
   },
+  "safety-validator": {
+    id: "safety-validator",
+    name: "Safety Validator Agent",
+    role: "AI Safety & Guardrails Specialist",
+    description: "Validates AI-generated remediation plans using Enkrypt AI before execution.",
+    promptTemplate: "safety-validator",
+    allowedTools: []
+  },
   "timeline-scribe": {
     id: "timeline-scribe",
     name: "Timeline Scribe Agent",
@@ -86,6 +94,7 @@ export class AgentRouter {
     anomaliesCount: number;
     hasDiagnosis: boolean;
     hasRemediation: boolean;
+    hasSafetyValidation: boolean;
     hasPostMortem: boolean;
   }): string {
     if (state.status === "TRIGGERED" && state.anomaliesCount === 0) {
@@ -97,7 +106,11 @@ export class AgentRouter {
     if (state.hasDiagnosis && !state.hasRemediation) {
       return "remediation-specialist";
     }
-    if (state.hasRemediation && !state.hasPostMortem) {
+
+    if (state.hasRemediation && !state.hasSafetyValidation) {
+      return "safety-validator";
+    }
+    if (state.hasSafetyValidation && !state.hasPostMortem) {
       return "post-mortem-scribe";
     }
     return "incident-commander";
