@@ -124,8 +124,10 @@ export class AgentRouter {
     status: string;
     logsRaw?: string;
     anomalies?: any[];
+    retrievedIncidents?: any[];
     rootCause?: any;
     remediationPlan?: any;
+    safetyValidation?: any;
     postMortem?: any;
   }) {
     return runCommanderDecision(state);
@@ -150,3 +152,4 @@ export class AgentRouter {
 export * from "./commander.js";
 export * from "./historical_retriever.js";
 export * from "./rca_analyst.js";
+export * from "./safety_validator.js";

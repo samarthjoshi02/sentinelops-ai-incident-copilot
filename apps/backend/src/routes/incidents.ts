@@ -60,7 +60,7 @@ export async function incidentRoutes(fastify: FastifyInstance) {
         }
       };
     } catch (error) {
-      fastify.log.error("Failed to fetch incidents:", error);
+      fastify.log.error({ err: error }, "Failed to fetch incidents");
       return reply.status(500).send({
         statusCode: 500,
         error: "Internal Server Error",
@@ -101,7 +101,7 @@ export async function incidentRoutes(fastify: FastifyInstance) {
 
       return incident;
     } catch (error) {
-      fastify.log.error(`Failed to fetch incident ${request.params}:`, error);
+      fastify.log.error({ err: error, params: request.params }, "Failed to fetch incident");
       return reply.status(500).send({
         statusCode: 500,
         error: "Internal Server Error",
@@ -164,7 +164,7 @@ export async function incidentRoutes(fastify: FastifyInstance) {
 
       return reply.status(201).send(result);
     } catch (error) {
-      fastify.log.error("Failed to create incident:", error);
+      fastify.log.error({ err: error }, "Failed to create incident");
       return reply.status(500).send({
         statusCode: 500,
         error: "Internal Server Error",
@@ -246,7 +246,7 @@ export async function incidentRoutes(fastify: FastifyInstance) {
 
       return result;
     } catch (error) {
-      fastify.log.error(`Failed to update incident ${request.params}:`, error);
+      fastify.log.error({ err: error, params: request.params }, "Failed to update incident");
       return reply.status(500).send({
         statusCode: 500,
         error: "Internal Server Error",
@@ -289,7 +289,7 @@ export async function incidentRoutes(fastify: FastifyInstance) {
         message: `Incident with ID ${id} has been permanently deleted.`
       });
     } catch (error) {
-      fastify.log.error(`Failed to delete incident ${request.params}:`, error);
+      fastify.log.error({ err: error, params: request.params }, "Failed to delete incident");
       return reply.status(500).send({
         statusCode: 500,
         error: "Internal Server Error",
@@ -348,6 +348,12 @@ export async function incidentRoutes(fastify: FastifyInstance) {
           workflowExecutionId: workflowExecution.id,
           logsRaw,
           anomalies: [],
+          retrievedIncidents: [],
+          runbooks: [],
+          postMortems: [],
+          knowledgeSummary: "",
+          evidence: [],
+          confidenceScore: 0,
           status: "TRIGGERED"
         }
       });
@@ -367,7 +373,7 @@ export async function incidentRoutes(fastify: FastifyInstance) {
       });
 
     } catch (error: any) {
-      fastify.log.error(`Failed to run remediation workflow for incident:`, error);
+      fastify.log.error({ err: error }, "Failed to run remediation workflow for incident");
       return reply.status(500).send({
         statusCode: 500,
         error: "Internal Server Error",

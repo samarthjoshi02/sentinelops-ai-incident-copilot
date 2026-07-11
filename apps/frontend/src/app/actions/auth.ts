@@ -1,7 +1,7 @@
 "use server";
 
 import { signIn, signOut } from "@/auth";
-import { prisma } from "../../../../shared/db";
+import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
 import { z } from "zod";
@@ -19,7 +19,7 @@ export async function registerUser(prevState: any, formData: FormData) {
     const validation = registerSchema.safeParse(rawData);
     
     if (!validation.success) {
-      return { error: validation.error.errors[0].message };
+      return { error: validation.error.issues[0].message };
     }
     
     const { name, email, password, role } = validation.data;

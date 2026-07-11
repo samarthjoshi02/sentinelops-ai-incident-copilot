@@ -212,12 +212,12 @@ export async function logRoutes(fastify: FastifyInstance) {
       }
 
       // Parse severity
-      let severity = IncidentSeverity.MEDIUM;
+      let severity: IncidentSeverity = IncidentSeverity.MEDIUM;
       const severityField = data.fields.severity 
         ? (data.fields.severity as any).value as string 
         : undefined;
 
-      if (severityField && Object.values(IncidentSeverity).includes(severityField as any)) {
+      if (severityField && Object.values(IncidentSeverity).includes(severityField as IncidentSeverity)) {
         severity = severityField as IncidentSeverity;
       }
 

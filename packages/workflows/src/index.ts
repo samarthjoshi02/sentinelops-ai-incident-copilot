@@ -50,6 +50,7 @@ export const workflowStateSchema = z.object({
   confidenceScore: z.number().default(0),
   rootCause: z.any().optional(),
   remediationPlan: z.any().optional(),
+  safetyValidation: z.any().optional(),
   postMortem: z.any().optional(),
   status: z.string().default("TRIGGERED")
 });
@@ -63,11 +64,19 @@ const enkryptSafety = new EnkryptAISafetyService();
 
 /**
  * 4. Step 1: Telemetry parsing & Anomaly Detection
+ * inputSchema matches the workflow's inputSchema (incidentId, logsRaw)
  */
 const anomalyDetectionStep = createStep({
   id: "anomaly-detection-step",
-  execute: async ({ state, setState }) => {
-    const { incidentId, workflowExecutionId, logsRaw } = state as IncidentWorkflowState;
+  inputSchema: z.object({
+    incidentId: z.string(),
+    logsRaw: z.string()
+  }),
+  outputSchema: z.object({ anomalies: z.array(z.any()) }),
+  stateSchema: workflowStateSchema,
+  execute: async ({ inputData, state, setState }) => {
+    const typedState = state as IncidentWorkflowState;
+    const { incidentId, workflowExecutionId, logsRaw } = typedState;
 
     workflowEventBus.emitEvent("step:started", { step: "anomaly-detection-step", incidentId });
 
@@ -75,12 +84,12 @@ const anomalyDetectionStep = createStep({
     const commanderStart = Date.now();
     const decision = await router.routeDynamic({
       incidentId,
-      status: state.status,
+      status: typedState.status,
       logsRaw,
-      anomalies: state.anomalies || [],
-      rootCause: state.rootCause,
-      remediationPlan: state.remediationPlan,
-      postMortem: state.postMortem
+      anomalies: typedState.anomalies || [],
+      rootCause: typedState.rootCause,
+      remediationPlan: typedState.remediationPlan,
+      postMortem: typedState.postMortem
     });
     const commanderDuration = Date.now() - commanderStart;
 
@@ -89,7 +98,7 @@ const anomalyDetectionStep = createStep({
         incidentId,
         agentName: "Incident Commander Agent",
         status: ExecutionStatus.COMPLETED,
-        input: { currentStatus: state.status },
+        input: { currentStatus: typedState.status },
         output: { decision, durationMs: commanderDuration },
         completedAt: new Date()
       }
@@ -132,7 +141,7 @@ const anomalyDetectionStep = createStep({
     }
 
     // Execute Log Parser Tool
-    const parseResult = await logParserTool.execute({ logsRaw });
+    const parseResult = await (logParserTool.execute as any)({ logsRaw });
     const anomalies = parseResult.anomalies;
 
     // Update db execution state
@@ -163,8 +172,8 @@ const anomalyDetectionStep = createStep({
     });
 
     // Update state context
-    const nextState = {
-      ...state,
+    const nextState: IncidentWorkflowState = {
+      ...typedState,
       anomalies,
       status: "INVESTIGATING"
     };
@@ -187,11 +196,16 @@ const anomalyDetectionStep = createStep({
 
 /**
  * 4.5 Step 1.5: Historical Retrieval & Context Enrichment
+ * inputSchema matches anomalyDetectionStep outputSchema
  */
 const historicalRetrievalStep = createStep({
   id: "historical-retrieval-step",
-  execute: async ({ state, setState }) => {
-    const { incidentId, workflowExecutionId, logsRaw } = state as IncidentWorkflowState;
+  inputSchema: z.object({ anomalies: z.array(z.any()) }),
+  outputSchema: z.object({ retrievalResult: z.any() }),
+  stateSchema: workflowStateSchema,
+  execute: async ({ inputData, state, setState }) => {
+    const typedState = state as IncidentWorkflowState;
+    const { incidentId, workflowExecutionId, logsRaw } = typedState;
 
     workflowEventBus.emitEvent("step:started", { step: "historical-retrieval-step", incidentId });
     workflowEventBus.emitEvent("custom", { type: "HISTORICAL_RETRIEVAL_STARTED", incidentId });
@@ -200,13 +214,13 @@ const historicalRetrievalStep = createStep({
     const commanderStart = Date.now();
     const decision = await router.routeDynamic({
       incidentId,
-      status: state.status,
+      status: typedState.status,
       logsRaw,
-      anomalies: state.anomalies || [],
-      retrievedIncidents: state.retrievedIncidents || [],
-      rootCause: state.rootCause,
-      remediationPlan: state.remediationPlan,
-      postMortem: state.postMortem
+      anomalies: typedState.anomalies || [],
+      retrievedIncidents: typedState.retrievedIncidents || [],
+      rootCause: typedState.rootCause,
+      remediationPlan: typedState.remediationPlan,
+      postMortem: typedState.postMortem
     });
     const commanderDuration = Date.now() - commanderStart;
 
@@ -215,7 +229,7 @@ const historicalRetrievalStep = createStep({
         incidentId,
         agentName: "Incident Commander Agent",
         status: ExecutionStatus.COMPLETED,
-        input: { currentStatus: state.status },
+        input: { currentStatus: typedState.status },
         output: { decision, durationMs: commanderDuration },
         completedAt: new Date()
       }
@@ -276,8 +290,8 @@ const historicalRetrievalStep = createStep({
     workflowEventBus.emitEvent("custom", { type: "MEMORY_CONTEXT_UPDATED", incidentId });
 
     // Update shared workflow state and DB
-    const nextState = {
-      ...state,
+    const nextState: IncidentWorkflowState = {
+      ...typedState,
       retrievedIncidents: retrievalResult.retrievedIncidents,
       runbooks: retrievalResult.runbooks,
       postMortems: retrievalResult.postMortems,
@@ -317,11 +331,16 @@ const historicalRetrievalStep = createStep({
 
 /**
  * 5. Step 2: Root Cause Analysis
+ * inputSchema matches historicalRetrievalStep outputSchema
  */
 const rootCauseAnalysisStep = createStep({
   id: "root-cause-analysis-step",
-  execute: async ({ state, setState }) => {
-    const { incidentId, workflowExecutionId, anomalies } = state as IncidentWorkflowState;
+  inputSchema: z.object({ retrievalResult: z.any() }),
+  outputSchema: z.object({ rootCause: z.any() }),
+  stateSchema: workflowStateSchema,
+  execute: async ({ inputData, state, setState }) => {
+    const typedState = state as IncidentWorkflowState;
+    const { incidentId, workflowExecutionId, anomalies } = typedState;
 
     workflowEventBus.emitEvent("step:started", { step: "root-cause-analysis-step", incidentId });
 
@@ -329,13 +348,13 @@ const rootCauseAnalysisStep = createStep({
     const commanderStart = Date.now();
     const decision = await router.routeDynamic({
       incidentId,
-      status: state.status,
-      logsRaw: state.logsRaw || "",
+      status: typedState.status,
+      logsRaw: typedState.logsRaw || "",
       anomalies,
-      retrievedIncidents: state.retrievedIncidents || [],
-      rootCause: state.rootCause,
-      remediationPlan: state.remediationPlan,
-      postMortem: state.postMortem
+      retrievedIncidents: typedState.retrievedIncidents || [],
+      rootCause: typedState.rootCause,
+      remediationPlan: typedState.remediationPlan,
+      postMortem: typedState.postMortem
     });
     const commanderDuration = Date.now() - commanderStart;
 
@@ -344,7 +363,7 @@ const rootCauseAnalysisStep = createStep({
         incidentId,
         agentName: "Incident Commander Agent",
         status: ExecutionStatus.COMPLETED,
-        input: { currentStatus: state.status },
+        input: { currentStatus: typedState.status },
         output: { decision, durationMs: commanderDuration },
         completedAt: new Date()
       }
@@ -381,7 +400,7 @@ const rootCauseAnalysisStep = createStep({
 
     // Execute RCA Analyst Agent
     const analysisStart = Date.now();
-    
+
     workflowEventBus.emitEvent("custom", {
       type: "RCA_STARTED",
       incidentId
@@ -389,12 +408,12 @@ const rootCauseAnalysisStep = createStep({
 
     const rcaResult = await runRootCauseAnalysis({
       incidentId,
-      logsRaw: state.logsRaw || "",
-      anomalies: state.anomalies || [],
-      retrievedIncidents: state.retrievedIncidents || [],
-      runbooks: state.runbooks || [],
-      postMortems: state.postMortems || [],
-      knowledgeSummary: state.knowledgeSummary || ""
+      logsRaw: typedState.logsRaw || "",
+      anomalies: typedState.anomalies || [],
+      retrievedIncidents: typedState.retrievedIncidents || [],
+      runbooks: typedState.runbooks || [],
+      postMortems: typedState.postMortems || [],
+      knowledgeSummary: typedState.knowledgeSummary || ""
     });
 
     const analysisDuration = Date.now() - analysisStart;
@@ -411,7 +430,7 @@ const rootCauseAnalysisStep = createStep({
     const rootCauseRecord = await prisma.$transaction(async (tx) => {
       const summaryText = rcaResult.rootCauses.map(rc => rc.title).join(", ") || rcaResult.reasoning;
       const evidenceText = rcaResult.rootCauses.flatMap(rc => rc.evidence).join("; ");
-      
+
       const rc = await tx.rootCause.create({
         data: {
           incidentId,
@@ -425,7 +444,7 @@ const rootCauseAnalysisStep = createStep({
       // Insert timeline entry detailing root causes diagnosed
       const firstCause = rcaResult.rootCauses[0];
       const desc = `Root cause identified. Diagnostic confidence: ${Math.round(rcaResult.overallConfidence * 100)}%. Primary Cause: ${firstCause?.title || "Unknown"}. Details: ${firstCause?.description || "No description provided."}`;
-      
+
       await tx.incidentTimeline.create({
         data: {
           incidentId,
@@ -463,8 +482,8 @@ const rootCauseAnalysisStep = createStep({
     workflowEventBus.emitEvent("agent:completed", { agentId: routedAgentId, executionId: agentExec.id });
 
     // Update shared context state
-    const nextState = {
-      ...state,
+    const nextState: IncidentWorkflowState = {
+      ...typedState,
       rootCause: rcaResult
     };
     await setState(nextState);
@@ -485,11 +504,16 @@ const rootCauseAnalysisStep = createStep({
 
 /**
  * 6. Step 3: Runbook Remediation Selection & Execution
+ * inputSchema matches rootCauseAnalysisStep outputSchema
  */
 const remediationStep = createStep({
   id: "remediation-step",
-  execute: async ({ state, setState }) => {
-    const { incidentId, workflowExecutionId, rootCause } = state as IncidentWorkflowState;
+  inputSchema: z.object({ rootCause: z.any() }),
+  outputSchema: z.object({ remediationPlan: z.any() }),
+  stateSchema: workflowStateSchema,
+  execute: async ({ inputData, state, setState }) => {
+    const typedState = state as IncidentWorkflowState;
+    const { incidentId, workflowExecutionId, rootCause } = typedState;
 
     workflowEventBus.emitEvent("step:started", { step: "remediation-step", incidentId });
 
@@ -497,13 +521,13 @@ const remediationStep = createStep({
     const commanderStart = Date.now();
     const decision = await router.routeDynamic({
       incidentId,
-      status: state.status,
-      logsRaw: state.logsRaw || "",
-      anomalies: state.anomalies || [],
-      retrievedIncidents: state.retrievedIncidents || [],
+      status: typedState.status,
+      logsRaw: typedState.logsRaw || "",
+      anomalies: typedState.anomalies || [],
+      retrievedIncidents: typedState.retrievedIncidents || [],
       rootCause,
-      remediationPlan: state.remediationPlan,
-      postMortem: state.postMortem
+      remediationPlan: typedState.remediationPlan,
+      postMortem: typedState.postMortem
     });
     const commanderDuration = Date.now() - commanderStart;
 
@@ -512,7 +536,7 @@ const remediationStep = createStep({
         incidentId,
         agentName: "Incident Commander Agent",
         status: ExecutionStatus.COMPLETED,
-        input: { currentStatus: state.status },
+        input: { currentStatus: typedState.status },
         output: { decision, durationMs: commanderDuration },
         completedAt: new Date()
       }
@@ -554,10 +578,20 @@ const remediationStep = createStep({
     ];
 
     // Execute Remediation Specialists' executor tool
-    const execResult = await remediationExecutorTool.execute({
+    const execResult = await (remediationExecutorTool.execute as any)({
       planId: "remediate-db-saturation",
       steps: mockSteps
     });
+
+    const remediationText = JSON.stringify(execResult);
+
+    const safetyResult = await enkryptSafety.validateResponse(remediationText);
+
+    if (!safetyResult.safe) {
+      throw new Error(
+        `Enkrypt AI blocked remediation: ${safetyResult.reason}`
+      );
+    }
 
     // Write Remediation Plan and transition incident status to RESOLVED
     const remediationPlanRecord = await prisma.$transaction(async (tx) => {
@@ -583,6 +617,15 @@ const remediationStep = createStep({
         }
       });
 
+      await tx.incidentTimeline.create({
+        data: {
+          incidentId,
+          eventDescription: `[Enkrypt AI] Safety validation passed. Remediation output cleared by guardrails.`,
+          type: TimelineEventType.AI_AGENT,
+          metadata: { safe: safetyResult.safe }
+        }
+      });
+
       return plan;
     });
 
@@ -597,9 +640,10 @@ const remediationStep = createStep({
 
     workflowEventBus.emitEvent("agent:completed", { agentId: routedAgentId, executionId: agentExec.id });
 
-    const nextState = {
-      ...state,
+    const nextState: IncidentWorkflowState = {
+      ...typedState,
       remediationPlan: remediationPlanRecord,
+      safetyValidation: safetyResult,
       status: "RESOLVED"
     };
     await setState(nextState);
@@ -620,11 +664,16 @@ const remediationStep = createStep({
 
 /**
  * 7. Step 4: Post-Mortem Logging & Timeline Audit
+ * inputSchema matches remediationStep outputSchema
  */
 const reportingStep = createStep({
   id: "reporting-step",
-  execute: async ({ state, setState }) => {
-    const { incidentId, workflowExecutionId, rootCause, remediationPlan } = state as IncidentWorkflowState;
+  inputSchema: z.object({ remediationPlan: z.any() }),
+  outputSchema: z.object({ postMortem: z.any() }),
+  stateSchema: workflowStateSchema,
+  execute: async ({ inputData, state, setState }) => {
+    const typedState = state as IncidentWorkflowState;
+    const { incidentId, workflowExecutionId, rootCause, remediationPlan } = typedState;
 
     workflowEventBus.emitEvent("step:started", { step: "reporting-step", incidentId });
 
@@ -632,13 +681,13 @@ const reportingStep = createStep({
     const commanderStart = Date.now();
     const decision = await router.routeDynamic({
       incidentId,
-      status: state.status,
-      logsRaw: state.logsRaw || "",
-      anomalies: state.anomalies || [],
-      retrievedIncidents: state.retrievedIncidents || [],
+      status: typedState.status,
+      logsRaw: typedState.logsRaw || "",
+      anomalies: typedState.anomalies || [],
+      retrievedIncidents: typedState.retrievedIncidents || [],
       rootCause,
       remediationPlan,
-      postMortem: state.postMortem
+      postMortem: typedState.postMortem
     });
     const commanderDuration = Date.now() - commanderStart;
 
@@ -647,7 +696,7 @@ const reportingStep = createStep({
         incidentId,
         agentName: "Incident Commander Agent",
         status: ExecutionStatus.COMPLETED,
-        input: { currentStatus: state.status },
+        input: { currentStatus: typedState.status },
         output: { decision, durationMs: commanderDuration },
         completedAt: new Date()
       }
@@ -683,7 +732,7 @@ const reportingStep = createStep({
     workflowEventBus.emitEvent("agent:invoked", { agentId: routedAgentId, executionId: agentExec.id });
 
     // Generate blameless Post-Mortem
-    const pmResult = await postMortemGeneratorTool.execute({
+    const pmResult = await (postMortemGeneratorTool.execute as any)({
       title: "Database latency pool saturation",
       summary: rootCause?.summary || "Surge in slow transaction threads",
       timeline: [
@@ -735,8 +784,8 @@ const reportingStep = createStep({
 
     workflowEventBus.emitEvent("agent:completed", { agentId: routedAgentId, executionId: agentExec.id });
 
-    const nextState = {
-      ...state,
+    const nextState: IncidentWorkflowState = {
+      ...typedState,
       postMortem: postMortemRecord,
       status: "CLOSED"
     };

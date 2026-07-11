@@ -1,5 +1,5 @@
 import "./env.js";
-import fastify from "fastify";
+import fastify, { FastifyError } from "fastify";
 import cors from "@fastify/cors";
 import cookie from "@fastify/cookie";
 import multipart from "@fastify/multipart";
@@ -49,6 +49,7 @@ const server = fastify({
 await server.register(cors, {
   origin: true, // Allow all origins for development, can restrict in production
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  credentials: true, // Required for Auth.js cookies
 });
 
 // Register Cookie & Multipart support
@@ -63,15 +64,15 @@ await server.register(incidentRoutes, { prefix: "/api" });
 await server.register(logRoutes, { prefix: "/api" });
 
 // 4. Global Error Handler
-server.setErrorHandler((error, request, reply) => {
-  server.log.error(error);
+server.setErrorHandler((err: FastifyError, request, reply) => {
+  server.log.error(err);
   
-  if (error.validation) {
+  if (err.validation) {
     return reply.status(400).send({
       statusCode: 400,
       error: "Bad Request",
-      message: error.message,
-      validation: error.validation,
+      message: err.message,
+      validation: err.validation,
     });
   }
 
@@ -89,7 +90,7 @@ server.get("/health", async (request, reply) => {
     // Ping PostgreSQL Neon Database
     await prisma.user.count();
   } catch (error) {
-    server.log.error("Database health check failed:", error);
+    server.log.error({ err: error }, "Database health check failed");
     dbStatus = "OFFLINE";
   }
 
