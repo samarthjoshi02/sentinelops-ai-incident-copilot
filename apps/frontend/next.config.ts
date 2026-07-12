@@ -1,11 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  experimental: {
-    turbo: {
-      root: "../../",
-    },
-  },
+  // Config options here
 };
 
 export default nextConfig;
