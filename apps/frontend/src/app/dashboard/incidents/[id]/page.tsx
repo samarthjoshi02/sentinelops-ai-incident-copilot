@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Clock, FileText, Activity, User, ShieldAlert, Zap, Server } from "lucide-react";
 import RemediationButton from "@/components/RemediationButton";
+import type { LogFile, WorkflowExecution, IncidentTimeline } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -119,7 +120,7 @@ export default async function IncidentDetailsPage({ params }: { params: Promise<
               <p className="text-sm text-cyber-muted italic">No log files or telemetry attached to this incident.</p>
             ) : (
               <div className="space-y-3">
-                {incident.logFiles.map((log) => (
+                {incident.logFiles.map((log: LogFile) => (
                   <div key={log.id} className="flex justify-between items-center p-3 bg-cyber-bg/50 border border-cyber-border rounded hover:border-cyber-primary/30 transition-colors">
                     <div className="flex items-center space-x-3">
                       <div className="p-2 bg-blue-950/30 rounded text-cyber-primary">
@@ -150,7 +151,7 @@ export default async function IncidentDetailsPage({ params }: { params: Promise<
               <p className="text-sm text-cyber-muted italic">No AI remediation workflows have been executed yet.</p>
             ) : (
               <div className="space-y-3">
-                {incident.workflowExecutions.map((exec) => (
+                {incident.workflowExecutions.map((exec: WorkflowExecution) => (
                   <div key={exec.id} className="p-3 bg-cyber-bg/50 border border-cyber-border rounded">
                     <div className="flex justify-between items-start mb-2">
                       <span className="text-sm text-white font-bold">{exec.workflowName}</span>
@@ -178,7 +179,7 @@ export default async function IncidentDetailsPage({ params }: { params: Promise<
           </h3>
 
           <div className="relative border-l-2 border-cyber-border/50 ml-3 space-y-8">
-            {incident.timeline.map((event, idx) => {
+            {incident.timeline.map((event: IncidentTimeline, idx: number) => {
               const isLatest = idx === 0;
               let EventIcon = Activity;
               let iconColor = "text-cyber-muted";
